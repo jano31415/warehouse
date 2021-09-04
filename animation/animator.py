@@ -10,12 +10,12 @@ class Animator:
     robot_res = 50
 
     def __init__(self):
-        robot_img = cv2.imread('static/robot.png')
+        robot_img = cv2.imread('animation/static/robot.png')
         self.robot = cv2.resize(robot_img, (self.robot_res, self.robot_res),
                                 interpolation=cv2.INTER_LINEAR)
-        item_img = cv2.imread('static/package.png')
+        item_img = cv2.imread('animation/static/package.png')
         self.item = cv2.resize(item_img, (self.robot_res, self.robot_res))
-        truck_img = cv2.imread('static/truck.png')
+        truck_img = cv2.imread('animation/static/truck.png')
         self.truck = cv2.resize(truck_img, (self.robot_res, self.robot_res))
 
     def create_grid(self, fig, state):
@@ -38,15 +38,26 @@ class Animator:
 
         interval=100
         ims = []
-        change=None
         for i in range(interval):
-            state.apply(change)
+            state.move_random()
             ims.append(self.animate(state))
 
         animator = ani.ArtistAnimation(fig, ims, interval=180, repeat=False, repeat_delay=1000)
-        # animator.save('basic_animation.gif', fps=2, writer="ffmpeg")
-
         plt.show()
+
+    def run_routing(self,state, routing):
+        fig = plt.figure()
+        self.grid = self.create_grid(fig, state)
+
+        ims = []
+        for change in routing:
+            state.apply(change)
+            ims.append(self.animate(state))
+
+        animator = ani.ArtistAnimation(fig, ims, interval=300, repeat=False,
+                                       repeat_delay=1000)
+        plt.show()
+
 
     def animate(self, state):
         images = []
@@ -68,7 +79,7 @@ class State:
         self.x = x
         self.y = y
 
-    def apply(self, change):
+    def move_random(self):
         self.time += 1
         for i,robot in enumerate(self.robot_pos):
             change = random.choice([-1,1])
@@ -79,6 +90,14 @@ class State:
                 robot_y = (robot_y + change) % self.y
             self.robot_pos[i] = (robot_x, robot_y)
 
+    def apply(self, change):
+        for i,move in enumerate(change):
+            xchg, ychg = move
+            robot_x, roboty = self.robot_pos[i]
+            self.robot_pos[i] = (robot_x+xchg, roboty+ychg)
+            for item in self.item_pos: # slow delete :S
+                if item == self.robot_pos[i]:
+                    self.item_pos.remove(item)
 
     def add_robot(self, n=1):
         for i in range(n):
